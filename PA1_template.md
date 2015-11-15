@@ -1,17 +1,6 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-author: Cathy White
-output: 
-  html_document:
-    keep_md: true
----
-```{r setup, echo=FALSE, cache=FALSE}
-## Pulled from http://yihui.name/knitr/demo/output/ to adjust how
-##    numbers are displayed inline.
-## numbers >= 10^6 will be denoted in scientific notation,
-## and rounded to 2 digits
-options(scipen = 2, digits = 2)
-```
+# Reproducible Research: Peer Assessment 1
+Cathy White  
+
 
 This document was created for the Coursera course Reproducible Research.  The intent is to practice literate statistical programming with the knitr package.  In this project, we are to load in and analyze activity monitoring data from one person taken at 5 minute intervals during October and November 2012.  
 
@@ -20,7 +9,8 @@ This document was created for the Coursera course Reproducible Research.  The in
 First, we need to read in the data.  If you are running this code, you would need to change the variable `directory_with_data` to the directory on your machine which contains the file activity.zip.
 
 Set the correct working directory.
-```{r}
+
+```r
 directory_with_data <- paste0("/Users/cathyc/Documents/School/Coursera/",
                               "ReproducibleResearch/Project1/RepData_",
                               "PeerAssessment1")
@@ -28,30 +18,54 @@ setwd(directory_with_data)
 ```
 
 Create a temporary directory, unzip the file there, and read it in.
-```{r}
+
+```r
 tmpdir <- tempdir()
 unzip("activity.zip", exdir=tmpdir)
 activity <- read.csv(paste0(tmpdir, "/activity.csv"))
 ```
 
 Pull in some useful libraries and make the dates nice.
-```{r results="hide"}
+
+```r
 library(lubridate)
 library(dplyr)
+```
+
+```
+## 
+## Attaching package: 'dplyr'
+## 
+## The following objects are masked from 'package:lubridate':
+## 
+##     intersect, setdiff, union
+## 
+## The following objects are masked from 'package:stats':
+## 
+##     filter, lag
+## 
+## The following objects are masked from 'package:base':
+## 
+##     intersect, setdiff, setequal, union
+```
+
+```r
 activity$date <- ymd(activity$date)
 ```
 
 ## What is mean total number of steps taken per day?
 
 Use aggregate to perform a sum of steps for each date and calculate the mean and median of the total number of steps per day.
-```{r}
+
+```r
 totals_by_date <- aggregate(steps~date, data=activity, sum, na.rm=TRUE)
 mean_per_day <- mean(totals_by_date$steps)
 median_per_day <- median(totals_by_date$steps)
 ```
 
 Plot a histogram of the total number of steps per day.
-```{r}
+
+```r
 hist(totals_by_date$steps, breaks = 10, 
      main="Histogram of total steps per day", 
      xlab="Total steps taken in a day")
@@ -60,33 +74,35 @@ legend("topright", lwd=5, legend = c("Median Nsteps"),
        col = c("Red"), box.lwd = 0)
 ```
 
-The mean number of steps taken per day is `r round(mean_per_day, digits=7)` and the median is `r median_per_day`.
+![](PA1_template_files/figure-html/unnamed-chunk-5-1.png) 
+
+The mean number of steps taken per day is 10766.19 and the median is 10765.
 
 ## What is the average daily activity pattern?
 
 The average daily activity pattern is defined as the mean number of steps per 5 minute interval across all of the days.  We'll use aggregate again to compute this, ignoring missing values.
-```{r}
+
+```r
 mean_by_interval <- aggregate(steps ~ interval, data=activity, mean, na.rm=TRUE)
 ```
 
 What does this average activity pattern look like?
-```{r}
+
+```r
 plot(mean_by_interval$interval, mean_by_interval$steps, type="l",
      xlab="5-minute Interval", ylab="Mean steps taken",
      main="Average daily activity")
 ```
 
-The maximum average daily activity occurs at interval `r mean_by_interval$interval[which.max(mean_by_interval$steps)]`.
+![](PA1_template_files/figure-html/unnamed-chunk-7-1.png) 
+
+The maximum average daily activity occurs at interval 835.
 
 ## Imputing missing values
 
-```{r echo=FALSE}
-n_total <- length(activity$steps)
-n_missing <- sum(is.na(activity$steps))
-percent_missing <- signif(n_missing/n_total * 100, 4)
-```
 
-Not all of the time intervals in this two-month period have a number of steps recorded.  Out of `r n_total` time intervals, `r n_missing` intervals are missing data (`r percent_missing`%).  We would like to fill in these values.  Since many people have different routines for different days of the week, we'll fill in missing values with the average value for that time interval for that day of the week.
+
+Not all of the time intervals in this two-month period have a number of steps recorded.  Out of 17568 time intervals, 2304 intervals are missing data (13.11%).  We would like to fill in these values.  Since many people have different routines for different days of the week, we'll fill in missing values with the average value for that time interval for that day of the week.
 
 We'll start by figuring out the average pattern by day of the week.  To do this we're going to do a couple steps:  
 
@@ -96,7 +112,8 @@ We'll start by figuring out the average pattern by day of the week.  To do this 
 4) Undo the grouping so that future operations aren't performed by this grouping  
 
 The resulting data set will be saved to a new data frame.
-```{r}
+
+```r
 filled_activity <- activity %>%
     mutate(weekday=wday(date, label=TRUE)) %>%
     group_by(weekday, interval) %>%
@@ -105,13 +122,15 @@ filled_activity <- activity %>%
 ```
 
 Now we have the information that we need to fill in missing values.  Fill in the NA values in `steps` with the value in the column `average_for_weekday`, which contains the average number of steps for that time on all of the days that are the same day of the week.
-```{r}
+
+```r
 na_inds <- is.na(filled_activity$steps)
 filled_activity$steps[na_inds] <- filled_activity$average_for_weekday[na_inds]
 ```
 
 Now let's look at the histogram again and see if anything has changed.  First do the aggregates for the filled data set, then plot the histogram
-```{r}
+
+```r
 new_totals_by_date <- aggregate(steps~date, data=filled_activity, sum, na.rm=TRUE)
 new_mean_per_day <- mean(new_totals_by_date$steps)
 new_median_per_day <- median(new_totals_by_date$steps)
@@ -126,17 +145,17 @@ legend("topright", lwd=5, col = c("Red", "Blue"), box.lwd = 0,
                   "Median with imputed data"))
 ```
 
-```{r echo=FALSE}
-mean_percent_inc <- (new_mean_per_day- mean_per_day)/mean_per_day * 100
-median_percent_inc <- (new_median_per_day- median_per_day)/median_per_day*100
-```
+![](PA1_template_files/figure-html/unnamed-chunk-11-1.png) 
 
-The original mean total number of steps per day was `r mean_per_day`.  With the imputed data, the mean is `r new_mean_per_day`, an increase of `r mean_percent_inc`%.  The original median is `r median_per_day` and the median with the imputed data is `r new_median_per_day`, an increase of `r median_percent_inc`%.
+
+
+The original mean total number of steps per day was 10766.19.  With the imputed data, the mean is 10821.21, an increase of 0.51%.  The original median is 10765 and the median with the imputed data is 11015, an increase of 2.32%.
 
 ## Are there differences in activity patterns between weekdays and weekends?
 
 We first need to classify days as either weekend or weekday.  Add a new column, `part_of_week`, that says "weekend" if the `weekday` column is "Sat" or "Sun" and "weekday" otherwise.  To do this, it's easier to just write a little function than to stuff everything into the call to `mutate`.
-```{r}
+
+```r
 week_part <- function(days){
     parts <- rep("Weekday", length(days))
     parts[days %in% c("Sat", "Sun")] <- "Weekend"
@@ -149,7 +168,8 @@ activity <- activity %>%
 ```
 
 Now compute the average profile for weekdays and weekends.  Use aggregate to make a new data frame with the two average profiles.  Plot with `ggplot2`.
-```{r}
+
+```r
 by_part_of_week <- aggregate(steps ~ interval + part_of_week,
                              data=activity, mean, na.rm=TRUE)
 library(ggplot2)
@@ -157,4 +177,6 @@ qplot(interval, steps, data=by_part_of_week, facets = part_of_week~.,
       geom="line", xlab="Time interval", ylab="Mean steps taken",
       main="Average profile by part of week")
 ```
+
+![](PA1_template_files/figure-html/unnamed-chunk-14-1.png) 
 
